@@ -5,12 +5,19 @@
   "bin": {
     "bb-customize3": "index.js"
   },
+  "scripts": {
+    "schematic": "schematics blank --name=extension"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@angular-devkit/schematics-cli": "^0.800.3",
     "commander": "^2.19.0",
     "fs-extra": "^7.0.1",
     "inquirer": "^6.2.2",
-    "walkdir": "^0.3.2"
+    "npx": "^10.2.0",
+    "shelljs": "^0.8.3",
+    "walkdir": "^0.3.2",
+    "xml2js": "^0.4.19"
   }
 }
