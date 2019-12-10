@@ -15,23 +15,56 @@ program
 const targetFolder = '.';
 const backbaseFolder =  "/node_modules/@backbase";
 
-program.command('*').action((widget) => {
-   var prompt = inquirer.createPromptModule();
+program.command('*').action(createPrompt);
 
-    fs.readFile(targetFolder + backbaseFolder + '/'+ widget + '/package.json', 'utf8', (err, contents) => {
+// no parameters passed
+if (process.argv.length === 2) {
+    createPrompt();
+}
+
+function createPrompt(widget) {
+    var prompt = inquirer.createPromptModule();
+
+    if (widget) {
+        readWidget(widget, prompt);
+        return;
+    }
+
+    if(fs.existsSync(targetFolder + backbaseFolder)){
+        const widgets = find_widgets();
+        prompt([{
+            type: 'list',
+            choices: widgets,
+            name: 'name',
+            message: 'Select the the widget to extend',
+        }]).then((answers) => {
+            readWidget(answers.name, prompt);
+        });
+    }
+    else {
+        console.error('Could not find node_modules, did you run npm install?');
+    }
+};
+
+function readWidget(widgetName, prompt) {
+    fs.readFile(targetFolder + backbaseFolder + '/'+ widgetName + '/package.json', 'utf8', (err, contents) => {
+        if(err) {
+            console.log(err);
+            process.exit();
+        }
         const title = JSON.parse(contents).description;
 
          prompt([{
             type: 'input',
             name: 'title',
             message: 'What will be the name of your component?',
-            default: 'Custom '+title
+            default: 'Custom ' + title
         },
         {
             type: 'input',
             name: 'widget',
             message: 'What will be the name of your widget?',
-            default: 'custom-'+widget
+            default: 'custom-' + widgetName
         }]).then((answers) => {
             /* const answers = {
                 widget: "ct-contact-manager-widget",
@@ -43,20 +76,20 @@ program.command('*').action((widget) => {
             componentName = answers.widget.split(' ')
                 .map((part) => part[0].toUpperCase()+part.slice(0, part.length))
                 .join('');
-            
+
                 console.log(componentName);
 
-            const copyModel$ = copyModel(targetFolder, backbaseFolder, widget, answers.widget);
+            const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widget, answers.widget);
 
             const copyTemplate$ = copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, title, answers);
 
-            addWidgetDependency(widgetDestination, answers.widget, widget, title)
-            Promise.all([copyModel$, copyTemplate$]).then(() => 
+            addWidgetDependency(widgetDestination, answers.widget, widgetName, title)
+            Promise.all([copyFiles$, copyTemplate$]).then(() =>
                 includeInputsAndOutputs(widgetDestination, answers.widget, componentName, answers.title)
             );
         });
     });
-});
+}
 
 // Search the node_modules folder for valid widgets
 function find_widgets(){
