@@ -17,7 +17,7 @@ const backbaseFolder =  "/node_modules/@backbase";
 
 program.command('*').action((widget) => {
    var prompt = inquirer.createPromptModule();
-    
+
     fs.readFile(targetFolder + backbaseFolder + '/'+ widget + '/package.json', 'utf8', (err, contents) => {
         const title = JSON.parse(contents).description;
 
@@ -78,7 +78,7 @@ function find_widgets(){
 function generateWidget(name) {
     const generateCommand = [
     'npx ng generate widget',
-    `--name="${name}"`
+    `--name="${name}"`,
     ].join(' ');
 
     console.log('Running command:', generateCommand);
@@ -97,7 +97,7 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
             let matchString = matches.join('\n');
             matchString = matchString.replace(/\\n/g, '\n');
             matchString = matchString.replace(/\\"/g, '"');
-            
+
             const templateFile = widgetDestination +'/'+ answers.widget + '.component.html';
             fs.writeFile(templateFile, matchString, (err) => {
                 if (err) throw err;
@@ -109,14 +109,22 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
 }
 
 // Copy the Model.xml file
-function copyModel(targetFolder, backbaseFolder, widget, name) {
+function copyFiles(targetFolder, backbaseFolder, widget, name) {
+    const sourcePath = targetFolder + backbaseFolder + '/'+ widget + '/backbase-items';
     return new Promise((done, reject) => {
-        walk.sync(targetFolder + backbaseFolder + '/'+ widget + '/backbase-items', {max_depth: 2, "no_return": true}, (path) => {
-            if(path.indexOf('model.xml') != -1) {
-                fs.copy(path, targetFolder + '/libs/' + name + '/model.xml');
-                console.log('Copied Model');
-                done();
-            }
+        walk.sync(sourcePath, {max_depth: 2, "no_return": true}, (path) => {
+            const filesToCopy = [
+                'model.xml',
+                'options.json',
+                'icon.png',
+            ];
+            filesToCopy.forEach(fileName => {
+                if(path.includes(fileName)) {
+                    fs.copy(path, targetFolder + '/libs/' + name + '/' + fileName);
+                    console.log(`Copied ${fileName}`);
+                    done();
+                }
+            });
         });
     });
 }
@@ -158,7 +166,7 @@ function addPreferencesToComponent(widgetDestination, name, preferences) {
 
 // Include the widget inside the template
 function addPreferencesToTemplate(widgetDestination, name, preferences) {
-    // <wrapped-widget 
+    // <wrapped-widget
     // [preferenceName]="preferenceName"
 }
 
