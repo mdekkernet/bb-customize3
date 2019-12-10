@@ -72,11 +72,7 @@ function readWidget(widgetName, prompt) {
             const widgetDestination = targetFolder + '/libs/' + answers.widget  + '/src';
 
             generateWidget(answers.widget);
-            componentName = answers.widget.split(' ')
-                .map((part) => part[0].toUpperCase()+part.slice(0, part.length))
-                .join('');
-
-                console.log(componentName);
+            componentName = snake2TitleCase(answers.widget) + 'Component';
 
             const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widgetName, answers.widget);
 
@@ -94,6 +90,14 @@ function readWidget(widgetName, prompt) {
             );
         });
     });
+}
+
+function snake2TitleCase(val) {
+    return val
+        .toLowerCase()
+        .replace(/([ -_]|^)(.)/g, function (allMatches, firstMatch, secondMatch) {
+            return secondMatch.toUpperCase();
+        });
 }
 
 // Search the node_modules folder for valid widgets
@@ -166,7 +170,6 @@ function copyFiles(targetFolder, backbaseFolder, widget, name) {
 // Add the original widget as dependency
 function addWidgetDependency(widgetDestination, widgetDestinationName, npmName, widgetModuleName) {
     const widgetModule = `${widgetDestination}/${widgetDestinationName}.module.ts`;
-    console.log('addWidgetDependency', widgetModule);
     fs.readFile(widgetModule, 'utf8', (err, contents) => {
         if (err) throw err;
 
@@ -221,9 +224,14 @@ function includeInputsAndOutputs(widgetDestination, widgetName, componentName, w
                 // Replacing values
                 model.catalog.widget[0].name = widgetName;
                 const preferences = model.catalog.widget[0].properties[0].property;
-                titlePreference = preferences.find((pref) => pref.$.name == 'title');
-                console.log(titlePreference);
+
+                const titlePreference = preferences.find((pref) => pref.$.name == 'title');
+                console.log('title: ', titlePreference, widgetTitle);
                 titlePreference.value[0]._ = widgetTitle;
+
+                const classId = preferences.find((pref) => pref.$.name == 'classId');
+                console.log('classId: ', classId, componentName);
+                classId.value = [componentName];
 
                 var builder = new xml2js.Builder();
                 var xmlContent = builder.buildObject(model);
