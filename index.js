@@ -48,11 +48,10 @@ function createPrompt(widget) {
 
 function readWidget(widgetName, prompt) {
     fs.readFile(targetFolder + backbaseFolder + '/'+ widgetName + '/package.json', 'utf8', (err, contents) => {
-        if(err) {
-            console.log(err);
-            process.exit();
-        }
-        const title = JSON.parse(contents).description;
+        if(err) throw err;
+        const packageJson = JSON.parse(contents);
+        const npmName = packageJson.name;
+        const title = packageJson.description;
 
          prompt([{
             type: 'input',
@@ -64,7 +63,7 @@ function readWidget(widgetName, prompt) {
             type: 'input',
             name: 'widget',
             message: 'What will be the name of your widget?',
-            default: 'custom-' + widgetName
+            default: 'custom-' + widgetName.replace(/-ang$/, '')
         }]).then((answers) => {
             /* const answers = {
                 widget: "ct-contact-manager-widget",
@@ -79,11 +78,17 @@ function readWidget(widgetName, prompt) {
 
                 console.log(componentName);
 
-            const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widget, answers.widget);
+            const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widgetName, answers.widget);
 
-            const copyTemplate$ = copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, title, answers);
+            const copyTemplate$ = copyTemplate(targetFolder, backbaseFolder, widgetDestination, widgetName, title, answers);
 
-            addWidgetDependency(widgetDestination, answers.widget, widgetName, title)
+            fs.readFile(targetFolder + backbaseFolder + '/'+ widgetName + '/public_api.d.ts', 'utf8', (err, contents) => {
+                if(err) throw err;
+                const widgetModuleMatch = contents.match(/(\S*WidgetModule)/gm);
+                const widgetModuleName = widgetModuleMatch && widgetModuleMatch[0] || '__WidgetModule';
+                addWidgetDependency(widgetDestination, answers.widget, npmName, widgetModuleName);
+            });
+
             Promise.all([copyFiles$, copyTemplate$]).then(() =>
                 includeInputsAndOutputs(widgetDestination, answers.widget, componentName, answers.title)
             );
@@ -109,13 +114,9 @@ function find_widgets(){
 
 // Generate a new Widget
 function generateWidget(name) {
-    const generateCommand = [
-    'npx ng generate widget',
-    `--name="${name}"`,
-    ].join(' ');
-
+    const generateCommand = `ng generate widget ${name}`;
     console.log('Running command:', generateCommand);
-    return sh.exec(generateCommand);
+    return sh.exec(`npx ${generateCommand}`);
 }
 
 // Create Templates.html file
@@ -163,23 +164,23 @@ function copyFiles(targetFolder, backbaseFolder, widget, name) {
 }
 
 // Add the original widget as dependency
-function addWidgetDependency(widgetDestination, widgetDestinationName, originalName, originalTitle) {
-    const widgetModule = widgetDestination +'/'+ widgetDestinationName + '.module.ts';
-    console.log(widgetModule);
+function addWidgetDependency(widgetDestination, widgetDestinationName, npmName, widgetModuleName) {
+    const widgetModule = `${widgetDestination}/${widgetDestinationName}.module.ts`;
+    console.log('addWidgetDependency', widgetModule);
     fs.readFile(widgetModule, 'utf8', (err, contents) => {
         if (err) throw err;
 
         contents = contents.replace('@NgModule({',[
             `import { BackbaseUiModule } from '@backbase/ui-ang';`,
-            //`import { ${originalTitle}AngModule as WrappedWidgetModule } from \'@backbase/${originalName}\';`,
+            `import { ${widgetModuleName} } from \'${npmName}\';`,
             '',
             '@NgModule({'
         ].join('\n'));
 
         contents = contents.replace('imports: [', [
             'imports: [',
-            //'WrappedWidgetModule,',
-            'BackbaseUiModule,'
+            `    ${widgetModuleName},`,
+            '    BackbaseUiModule,'
         ].join('\n'));
 
         console.log(contents);
