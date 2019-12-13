@@ -136,6 +136,9 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
             matchString = matchString.replace(/\\n/g, '\n');
             matchString = matchString.replace(/\\"/g, '"');
 
+            const widgetTag = `bb-${widget.replace(/-ang$/, '')}`
+            matchString = `<${widgetTag}></${widgetTag}>\n<!-- \n${matchString} -->`;
+
             const templateFile = widgetDestination +'/'+ answers.widget + '.component.html';
             fs.writeFile(templateFile, matchString, (err) => {
                 if (err) throw err;
