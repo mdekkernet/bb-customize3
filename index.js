@@ -229,11 +229,9 @@ function includeInputsAndOutputs(widgetDestination, widgetName, componentName, w
                 const preferences = model.catalog.widget[0].properties[0].property;
 
                 const titlePreference = preferences.find((pref) => pref.$.name == 'title');
-                console.log('title: ', titlePreference, widgetTitle);
                 titlePreference.value[0]._ = widgetTitle;
 
                 const classId = preferences.find((pref) => pref.$.name == 'classId');
-                console.log('classId: ', classId, componentName);
                 classId.value = [componentName];
 
                 var builder = new xml2js.Builder();
