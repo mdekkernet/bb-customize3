@@ -86,7 +86,7 @@ function readWidget(widgetName, prompt) {
             });
 
             Promise.all([copyFiles$, copyTemplate$]).then(() =>
-                includeInputsAndOutputs(widgetDestination, answers.widget, componentName, answers.title)
+                includeInputsAndOutputs(widgetDestination, answers.widget, componentName, answers.title, npmName)
             );
         });
     });
@@ -198,7 +198,7 @@ function addWidgetDependency(widgetDestination, widgetDestinationName, npmName, 
 }
 
 // Add preferences to the component
-function addPreferencesToComponent(widgetDestination, name, preferences) {
+function addPreferencesToComponent(widgetDestination, name, preferences, npmName, originalComponentName) {
     // @Input()
     // preferenceName?: String;
 
@@ -206,6 +206,12 @@ function addPreferencesToComponent(widgetDestination, name, preferences) {
     const componentFile = widgetDestination + `/${name}.component.ts`;
     fs.readFile(componentFile, 'utf8', (err, contents) => {
         if(err) throw err;
+
+        const copyRoutesSnippet = `import { CopyRoutes } from '@backbase/foundation-ang/core';\n` +
+            `import { ${originalComponentName} } from '${npmName}';\n\n` +
+            `@CopyRoutes(${originalComponentName})\n@Component`
+
+        contents = contents.replace(/@Component/g, copyRoutesSnippet);
         contents = contents.replace(/template: `[^`]*`/g, `templateUrl: './${name}.component.html'`);
 
         fs.writeFile(componentFile, contents, (err) => {
@@ -222,7 +228,7 @@ function addPreferencesToTemplate(widgetDestination, name, preferences) {
 }
 
 // Extract the inputs and outputs and wire them inside the component
-function includeInputsAndOutputs(widgetDestination, widgetName, componentName, widgetTitle) {
+function includeInputsAndOutputs(widgetDestination, widgetName, componentName, widgetTitle, npmName) {
     return new Promise((resolve, reject) => {
         const modelXmlFile = widgetDestination + '/../model.xml';
         fs.readFile(modelXmlFile, 'utf8', (err, contents) => {
@@ -231,18 +237,16 @@ function includeInputsAndOutputs(widgetDestination, widgetName, componentName, w
             xml2js.parseString(contents, (err, model) => {
                 if (err) throw err;
                 const inputsAndOutputs = findPreferences(model, widgetDestination);
+                const preferences = model.catalog.widget[0].properties[0].property;
+                const titlePreference = preferences.find((pref) => pref.$.name == 'title');
+                const classId = preferences.find((pref) => pref.$.name == 'classId');
 
-                const component$ = addPreferencesToComponent(widgetDestination, widgetName, inputsAndOutputs);
+                const component$ = addPreferencesToComponent(widgetDestination, widgetName, inputsAndOutputs, npmName, classId.value);
                 const template$ = addPreferencesToTemplate(widgetDestination, widgetName, inputsAndOutputs);
 
                 // Replacing values
                 model.catalog.widget[0].name = widgetName;
-                const preferences = model.catalog.widget[0].properties[0].property;
-
-                const titlePreference = preferences.find((pref) => pref.$.name == 'title');
                 titlePreference.value[0]._ = widgetTitle;
-
-                const classId = preferences.find((pref) => pref.$.name == 'classId');
                 classId.value = [componentName];
 
                 var builder = new xml2js.Builder();
