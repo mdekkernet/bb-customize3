@@ -67,7 +67,7 @@ function readWidget(widgetName, prompt) {
         }]).then((answers) => {
             /* const answers = {
                 widget: "ct-contact-manager-widget",
-                title: "Coutts Contact Manager Widget",
+                title: "Custom Contact Manager Widget",
             }; */
             const widgetDestination = targetFolder + '/libs/' + answers.widget  + '/src';
 
@@ -127,7 +127,6 @@ function generateWidget(name) {
 function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, title, answers) {
     return new Promise((done, reject) => {
         const sourceMap = targetFolder + backbaseFolder + '/'+ widget + '/bundles/backbase-'+ widget +'.umd.js';
-        console.log(sourceMap);
         fs.readFile(sourceMap, 'utf8', (err, contents) => {
             const regex = /<ng-template.*<\/ng-template>/g;
             const matches = contents.match(regex);
@@ -135,9 +134,11 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
             let matchString = matches.join('\n');
             matchString = matchString.replace(/\\n/g, '\n');
             matchString = matchString.replace(/\\"/g, '"');
+            matchString = matchString.replace(/<!--/g, '<! --');
+            matchString = matchString.replace(/-->/g, '-- >');
 
             const widgetTag = `bb-${widget.replace(/-ang$/, '')}`
-            matchString = `<${widgetTag}></${widgetTag}>\n<!-- \n${matchString} -->`;
+            matchString = `<${widgetTag}></${widgetTag}>\n<!-- \n${matchString}\n -->`;
 
             const templateFile = widgetDestination +'/'+ answers.widget + '.component.html';
             fs.writeFile(templateFile, matchString, (err) => {
@@ -189,7 +190,6 @@ function addWidgetDependency(widgetDestination, widgetDestinationName, npmName, 
             '    BackbaseUiModule,'
         ].join('\n'));
 
-        console.log(contents);
         fs.writeFile(widgetModule, contents, (err) => {
             if (err) throw err;
             console.log('Added Widget Dependency');
@@ -201,6 +201,17 @@ function addWidgetDependency(widgetDestination, widgetDestinationName, npmName, 
 function addPreferencesToComponent(widgetDestination, name, preferences) {
     // @Input()
     // preferenceName?: String;
+
+    // Update component
+    const componentFile = widgetDestination + `/${name}.component.ts`;
+    fs.readFile(componentFile, 'utf8', (err, contents) => {
+        if(err) throw err;
+        contents = contents.replace(/template: `[^`]*`/g, `templateUrl: './${name}.component.html'`);
+
+        fs.writeFile(componentFile, contents, (err) => {
+            if (err) throw err;
+        });
+    });
 
 }
 
