@@ -75,7 +75,6 @@ function readWidget(widgetName, prompt) {
             componentName = snake2TitleCase(answers.widget) + 'Component';
 
             const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widgetName, answers.widget);
-
             const copyTemplate$ = copyTemplate(targetFolder, backbaseFolder, widgetDestination, widgetName, title, answers);
 
             fs.readFile(targetFolder + backbaseFolder + '/'+ widgetName + '/public_api.d.ts', 'utf8', (err, contents) => {
@@ -85,8 +84,8 @@ function readWidget(widgetName, prompt) {
                 addWidgetDependency(widgetDestination, answers.widget, npmName, widgetModuleName);
             });
 
-            Promise.all([copyFiles$, copyTemplate$]).then(() =>
-                includeInputsAndOutputs(widgetDestination, answers.widget, componentName, answers.title, npmName)
+            Promise.all([copyFiles$, copyTemplate$]).then(([, widgetTag]) =>
+                includeInputsAndOutputs(widgetDestination, answers.widget, componentName, answers.title, npmName, widgetTag)
             );
         });
     });
@@ -138,13 +137,13 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
             matchString = matchString.replace(/-->/g, '-- >');
 
             const widgetTag = `bb-${widget.replace(/-ang$/, '')}`
-            matchString = `<${widgetTag}></${widgetTag}>\n<!-- \n${matchString}\n -->`;
+            matchString = `<${widgetTag}></${widgetTag}>\n\n<!-- \n${matchString}\n -->`;
 
             const templateFile = widgetDestination +'/'+ answers.widget + '.component.html';
             fs.writeFile(templateFile, matchString, (err) => {
                 if (err) throw err;
                 console.log('Saved Template');
-                done();
+                done(widgetTag);
             });
         });
     });
@@ -198,7 +197,7 @@ function addWidgetDependency(widgetDestination, widgetDestinationName, npmName, 
 }
 
 // Add preferences to the component
-function addPreferencesToComponent(widgetDestination, name, preferences, npmName, originalComponentName) {
+function addPreferencesToComponent(widgetDestination, name, [inputs, outputs], npmName, originalComponentName) {
     // @Input()
     // preferenceName?: String;
 
@@ -209,10 +208,23 @@ function addPreferencesToComponent(widgetDestination, name, preferences, npmName
 
         const copyRoutesSnippet = `import { CopyRoutes } from '@backbase/foundation-ang/core';\n` +
             `import { ${originalComponentName} } from '${npmName}';\n\n` +
-            `@CopyRoutes(${originalComponentName})\n@Component`
+            `@CopyRoutes(${originalComponentName})\n$&`;
 
+        let outputString = '';
+        let handlerString = '';
+        if (outputs && outputs.length) {
+            outputs.forEach((val) => {
+                const outputKey = val.split('output.')[1];
+                if (!outputKey) return;
+                outputString += `\n  @Output() ${outputKey} = new EventEmitter<any>();`;
+                handlerString += `\n\n  ${outputKey}Handler(data: any) {\n    this.${outputKey}.next(data);\n  }`;
+            });
+        }
+
+        contents = contents.replace(/ } from '@angular\/core'/g, ', Output, EventEmitter$&');
         contents = contents.replace(/@Component/g, copyRoutesSnippet);
         contents = contents.replace(/template: `[^`]*`/g, `templateUrl: './${name}.component.html'`);
+        contents = contents.replace('constructor() { }', `${outputString}\n\n  constructor() { }${handlerString}`);
 
         fs.writeFile(componentFile, contents, (err) => {
             if (err) throw err;
@@ -222,13 +234,34 @@ function addPreferencesToComponent(widgetDestination, name, preferences, npmName
 }
 
 // Include the widget inside the template
-function addPreferencesToTemplate(widgetDestination, name, preferences) {
+function addPreferencesToTemplate(widgetDestination, name, [inputs, outputs], widgetTag) {
+
     // <wrapped-widget
     // [preferenceName]="preferenceName"
+
+    const templateFile = widgetDestination + `/${name}.component.html`;
+    fs.readFile(templateFile, 'utf8', (err, contents) => {
+        if(err) throw err;
+
+        let outputString = '';
+        if (outputs && outputs.length) {
+            outputs.forEach((val) => {
+                const outputKey = val.split('output.')[1];
+                if (!outputKey) return result;
+                outputString += `\n  (${outputKey})="${outputKey}Handler($event)"`;
+            });
+        }
+
+        contents = contents.replace(`<${widgetTag}>`, `<${widgetTag}${outputString}\n>`);
+        fs.writeFile(templateFile, contents, (err) => {
+            if (err) throw err;
+            console.log('Outputs added to the template');
+        });
+    });
 }
 
 // Extract the inputs and outputs and wire them inside the component
-function includeInputsAndOutputs(widgetDestination, widgetName, componentName, widgetTitle, npmName) {
+function includeInputsAndOutputs(widgetDestination, widgetName, componentName, widgetTitle, npmName, widgetTag) {
     return new Promise((resolve, reject) => {
         const modelXmlFile = widgetDestination + '/../model.xml';
         fs.readFile(modelXmlFile, 'utf8', (err, contents) => {
@@ -242,7 +275,7 @@ function includeInputsAndOutputs(widgetDestination, widgetName, componentName, w
                 const classId = preferences.find((pref) => pref.$.name == 'classId');
 
                 const component$ = addPreferencesToComponent(widgetDestination, widgetName, inputsAndOutputs, npmName, classId.value);
-                const template$ = addPreferencesToTemplate(widgetDestination, widgetName, inputsAndOutputs);
+                const template$ = addPreferencesToTemplate(widgetDestination, widgetName, inputsAndOutputs, widgetTag);
 
                 // Replacing values
                 model.catalog.widget[0].name = widgetName;
