@@ -57,13 +57,13 @@ function readWidget(widgetName, prompt) {
             type: 'input',
             name: 'title',
             message: 'What will be the name of your component?',
-            default: 'Custom ' + title
+            default: 'Extended ' + title
         },
         {
             type: 'input',
             name: 'widget',
             message: 'What will be the name of your widget?',
-            default: 'custom-' + widgetName.replace(/-ang$/, '')
+            default: widgetName.replace(/-ang$/, '') + '-extended'
         }]).then((answers) => {
             /* const answers = {
                 widget: "ct-contact-manager-widget",
@@ -217,7 +217,7 @@ function addPreferencesToComponent(widgetDestination, name, [inputs, outputs], n
                 const outputKey = val.split('output.')[1];
                 if (!outputKey) return;
                 outputString += `\n  @Output() ${outputKey} = new EventEmitter<any>();`;
-                handlerString += `\n\n  ${outputKey}Handler(data: any) {\n    this.${outputKey}.next(data);\n  }`;
+                handlerString += `\n\n  ${getEventHandlerName(outputKey)}(data: any) {\n    this.${outputKey}.next(data);\n  }`;
             });
         }
 
@@ -248,7 +248,7 @@ function addPreferencesToTemplate(widgetDestination, name, [inputs, outputs], wi
             outputs.forEach((val) => {
                 const outputKey = val.split('output.')[1];
                 if (!outputKey) return result;
-                outputString += `\n  (${outputKey})="${outputKey}Handler($event)"`;
+                outputString += `\n  (${outputKey})="${getEventHandlerName(outputKey)}($event)"`;
             });
         }
 
@@ -318,6 +318,11 @@ function findPreferences(model, widgetDestination, callback){
 
     return [inputs, outputs];
 }
+
+function getEventHandlerName(eventName) {
+    return 'on' + eventName.charAt(0).toUpperCase() + eventName.slice(1);
+}
+
 program.parse(process.argv);
 
 if(program.list){
