@@ -1,15 +1,15 @@
 {
   "name": "bb-customize3",
   "version": "1.0.0",
-  "description": "",
+  "description": "Generate a new Extended Widget",
   "bin": {
     "bb-customize3": "index.js"
   },
   "scripts": {
     "schematic": "schematics blank --name=extension"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "martijnd@backbase.com",
+  "license": "MIT",
   "dependencies": {
     "@angular-devkit/schematics-cli": "^0.800.3",
     "commander": "^2.19.0",
