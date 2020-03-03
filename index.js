@@ -9,18 +9,13 @@ const xml2js = require('xml2js');
 
 program
   .version('1.0.0')
+  .option('-n, --name <name>', 'Widget Title (eg. Custom Product Summary)')
+  .option('-m, --module <module>', 'Module Name (eg. product-summary-extended)')
   .usage('[options] <file ...>')
-  .option('--list', 'List all available widgets')
+  .option('--list', 'List all available widgets');
 
 const targetFolder = '.';
 const backbaseFolder =  "/node_modules/@backbase";
-
-program.command('*').action(createPrompt);
-
-// no parameters passed
-if (process.argv.length === 2) {
-    createPrompt();
-}
 
 function createPrompt(widget) {
     var prompt = inquirer.createPromptModule();
@@ -46,48 +41,50 @@ function createPrompt(widget) {
     }
 };
 
-function readWidget(widgetName, prompt) {
+function readWidget(widgetName, prompt, filledAnswers) {
     fs.readFile(targetFolder + backbaseFolder + '/'+ widgetName + '/package.json', 'utf8', (err, contents) => {
         if(err) throw err;
         const packageJson = JSON.parse(contents);
         const npmName = packageJson.name;
         const title = packageJson.description;
 
-         prompt([{
-            type: 'input',
-            name: 'title',
-            message: 'What will be the name of your component?',
-            default: 'Extended ' + title
-        },
-        {
-            type: 'input',
-            name: 'widget',
-            message: 'What will be the name of your widget?',
-            default: widgetName.replace(/-ang$/, '') + '-extended'
-        }]).then((answers) => {
-            /* const answers = {
-                widget: "ct-contact-manager-widget",
-                title: "Custom Contact Manager Widget",
-            }; */
-            const widgetDestination = targetFolder + '/libs/' + answers.widget  + '/src';
+        if(filledAnswers){
+            doGenerate(filledAnswers);
+        } else {
+            prompt([{
+                type: 'input',
+                name: 'name',
+                message: 'What will be the Name of your Widget?',
+                default: 'Extended ' + title
+            },
+            {
+                type: 'input',
+                name: 'module',
+                message: 'What will be Module Name that is referenced by the app?',
+                default: widgetName.replace(/-ang$/, '') + '-extended'
+            }]).then(doGenerate);
+        }
 
-            generateWidget(answers.widget);
-            componentName = snake2TitleCase(answers.widget) + 'Component';
+        function doGenerate(answers) {
+            const widgetDestination = targetFolder + '/libs/' + answers.module  + '/src';
 
-            const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widgetName, answers.widget);
+            generateWidget(answers.module);
+            componentName = snake2TitleCase(answers.module) + 'Component';
+
+            const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widgetName, answers.module);
             const copyTemplate$ = copyTemplate(targetFolder, backbaseFolder, widgetDestination, widgetName, title, answers);
 
             fs.readFile(targetFolder + backbaseFolder + '/'+ widgetName + '/public_api.d.ts', 'utf8', (err, contents) => {
                 if(err) throw err;
                 const widgetModuleMatch = contents.match(/(\S*WidgetModule)/gm);
                 const widgetModuleName = widgetModuleMatch && widgetModuleMatch[0] || '__WidgetModule';
-                addWidgetDependency(widgetDestination, answers.widget, npmName, widgetModuleName);
+                addWidgetDependency(widgetDestination, answers.module, npmName, widgetModuleName);
             });
 
             Promise.all([copyFiles$, copyTemplate$]).then(([, widgetTag]) =>
-                includeInputsAndOutputs(widgetDestination, answers.widget, componentName, answers.title, npmName, widgetTag)
+                includeInputsAndOutputs(widgetDestination, answers.module, componentName, answers.name, npmName, widgetTag)
             );
-        });
+        }
     });
 }
 
@@ -325,6 +322,7 @@ function getEventHandlerName(eventName) {
 
 program.parse(process.argv);
 
+// Show a list of all available source widgets
 if(program.list){
     console.log('Available widgets:');
 
@@ -335,4 +333,27 @@ if(program.list){
     else {
         console.error('Could not find node_modules, did you run npm install?');
     }
+
+    return
+}
+
+// Provided source, target name & target module
+if(program.name && program.module){
+    console.log('GENERATING: '+program.args[0]+' name: '+program.name+' module: '+program.module)
+    readWidget(program.args[0], null, {
+        name: program.name,
+        module: program.module
+    })
+
+    return
+}
+
+// Provided only source name
+if (process.argv.length === 3){
+    createPrompt(process.argv[2]);
+}
+
+// No parameters passed
+if (process.argv.length === 2) {
+    createPrompt();
 }
