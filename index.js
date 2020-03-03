@@ -9,7 +9,7 @@ const xml2js = require('xml2js');
 
 program
   .version('1.0.0')
-  .option('-n, --name <name>', 'Widget Title (eg. Custom Product Summary)')
+  .option('-t, --title <name>', 'Widget Title (eg. Custom Product Summary)')
   .option('-m, --module <module>', 'Module Name (eg. product-summary-extended)')
   .usage('[options] <file ...>')
   .option('--list', 'List all available widgets');
@@ -53,8 +53,8 @@ function readWidget(widgetName, prompt, filledAnswers) {
         } else {
             prompt([{
                 type: 'input',
-                name: 'name',
-                message: 'What will be the Name of your Widget?',
+                name: 'title',
+                message: 'What will be the Title of your Widget?',
                 default: 'Extended ' + title
             },
             {
@@ -82,7 +82,7 @@ function readWidget(widgetName, prompt, filledAnswers) {
             });
 
             Promise.all([copyFiles$, copyTemplate$]).then(([, widgetTag]) =>
-                includeInputsAndOutputs(widgetDestination, answers.module, componentName, answers.name, npmName, widgetTag)
+                includeInputsAndOutputs(widgetDestination, answers.module, componentName, answers.title, npmName, widgetTag)
             );
         }
     });
@@ -338,10 +338,10 @@ if(program.list){
 }
 
 // Provided source, target name & target module
-if(program.name && program.module){
-    console.log('GENERATING: '+program.args[0]+' name: '+program.name+' module: '+program.module)
+if(program.title && program.module){
+    console.log('GENERATING: '+program.args[0]+' title: '+program.title+' module: '+program.module)
     readWidget(program.args[0], null, {
-        name: program.name,
+        title: program.title,
         module: program.module
     })
 

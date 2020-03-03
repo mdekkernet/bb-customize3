@@ -7,7 +7,8 @@ bb-customize3 - Generate a new Extended Widget
 ```bash
 bb-customize3 [--help] [-v|--version]
 bb-customize3 <source-widget>
-bb-customize3 <source-widget> --name target-widget --module target-module
+bb-customize3 <source-widget> --title target-widget --module target-module
+bb-customize3 --list
 ```
 
 # COMMANDS
@@ -19,7 +20,7 @@ bb-customize3
 ## SYNOPSIS
 
 ```bash
-bb-customize3 <name>
+bb-customize3 <source-name>
 ```
 
 ## DESCRIPTION
@@ -43,7 +44,7 @@ The tool will ask you first:
 Lists all widget from default 'node_modules' directory:
 
 ```bash
-  $ bb-customize3
+  $ bb-customize3 --list
 ```
 
 ## DISCLAIMER
