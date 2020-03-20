@@ -114,7 +114,7 @@ function find_widgets(){
 
 // Generate a new Widget
 function generateWidget(name) {
-    const generateCommand = `ng generate widget ${name}`;
+    const generateCommand = `ng generate widget ${name} --inlineTemplate=false`;
     console.log('Running command:', generateCommand);
     return sh.exec(`npx ${generateCommand}`);
 }
@@ -136,7 +136,7 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
             const widgetTag = `bb-${widget.replace(/-ang$/, '')}`
             matchString = `<${widgetTag}></${widgetTag}>\n\n<!-- \n${matchString}\n -->`;
 
-            const templateFile = widgetDestination +'/'+ answers.widget + '.component.html';
+            const templateFile = widgetDestination +'/'+ answers.module + '.component.html';
             fs.writeFile(templateFile, matchString, (err) => {
                 if (err) throw err;
                 console.log('Saved Template');
