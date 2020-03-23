@@ -1,6 +1,6 @@
 {
   "name": "bb-customize3",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Generate a new Extended Widget",
   "bin": {
     "bb-customize3": "index.js"
