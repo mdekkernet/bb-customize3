@@ -114,7 +114,7 @@ function find_widgets(){
 
 // Generate a new Widget
 function generateWidget(name) {
-    const generateCommand = `ng generate widget ${name} --inlineTemplate=false`;
+    const generateCommand = `ng generate widget ${name}`;
     console.log('Running command:', generateCommand);
     return sh.exec(`npx ${generateCommand}`);
 }
