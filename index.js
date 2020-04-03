@@ -6,9 +6,10 @@ const fs = require('fs-extra');
 const inquirer = require('inquirer');
 const sh = require('shelljs')
 const xml2js = require('xml2js');
+const version = require('./package.json').version;
 
 program
-  .version('1.0.0')
+  .version(version)
   .option('-t, --title <name>', 'Widget Title (eg. Custom Product Summary)')
   .option('-m, --module <module>', 'Module Name (eg. product-summary-extended)')
   .usage('[options] <file ...>')
