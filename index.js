@@ -340,7 +340,7 @@ if(program.list){
 
 // Provided source, target name & target module
 if(program.title && program.module){
-    console.log('GENERATING: '+program.args[0]+' title: '+program.title+' module: '+program.module)
+    console.log(`GENERATING: ${program.args[0]}, title: "${program.title}", module: ${program.module}`)
     readWidget(program.args[0], null, {
         title: program.title,
         module: program.module
@@ -350,11 +350,11 @@ if(program.title && program.module){
 }
 
 // Provided only source name
-if (process.argv.length === 3){
-    createPrompt(process.argv[2]);
+if (program.args.length > 0){
+    createPrompt(program.args[0]);
 }
 
 // No parameters passed
-if (process.argv.length === 2) {
+if (program.args.length === 0) {
     createPrompt();
 }
