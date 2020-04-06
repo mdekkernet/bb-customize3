@@ -12,11 +12,12 @@ program
   .version(version)
   .option('-t, --title <name>', 'Widget Title (eg. Custom Product Summary)')
   .option('-m, --module <module>', 'Module Name (eg. product-summary-extended)')
+  .option('-s, --enable-slots', 'Enable Extension Slots (commented by default)', false)
   .usage('[options] <file ...>')
   .option('--list', 'List all available widgets');
 
 const targetFolder = '.';
-const backbaseFolder =  "/node_modules/@backbase";
+const backbaseFolder = '/node_modules/@backbase';
 
 function createPrompt(widget) {
     var prompt = inquirer.createPromptModule();
@@ -131,11 +132,15 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
             let matchString = matches.join('\n');
             matchString = matchString.replace(/\\n/g, '\n');
             matchString = matchString.replace(/\\"/g, '"');
-            matchString = matchString.replace(/<!--/g, '<! --');
-            matchString = matchString.replace(/-->/g, '-- >');
 
             const widgetTag = `bb-${widget.replace(/-ang$/, '')}`
-            matchString = `<${widgetTag}></${widgetTag}>\n\n<!-- \n${matchString}\n -->`;
+            if (!enableExtensionSlots) {
+                matchString = matchString.replace(/<!--/g, '<! --');
+                matchString = matchString.replace(/-->/g, '-- >');
+                matchString = `<!-- \n${matchString}\n -->`;
+            }
+
+            matchString = `<${widgetTag}></${widgetTag}>\n\n${matchString}`;
 
             const templateFile = widgetDestination +'/'+ answers.module + '.component.html';
             fs.writeFile(templateFile, matchString, (err) => {
@@ -322,6 +327,7 @@ function getEventHandlerName(eventName) {
 }
 
 program.parse(process.argv);
+const enableExtensionSlots = program.enableSlots;
 
 // Show a list of all available source widgets
 if(program.list){
