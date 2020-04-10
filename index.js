@@ -126,7 +126,7 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
     return new Promise((done, reject) => {
         const sourceMap = targetFolder + backbaseFolder + '/'+ widget + '/bundles/backbase-'+ widget +'.umd.js';
         fs.readFile(sourceMap, 'utf8', (err, contents) => {
-            const regex = /<ng-template.*<\/ng-template>/g;
+            const regex = /<ng-template[^>]*Customizable.*<\/ng-template>/g;
             const matches = contents.match(regex);
 
             let matchString = matches.join('\n');
