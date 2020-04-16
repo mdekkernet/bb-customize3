@@ -13,11 +13,17 @@ program
   .option('-t, --title <name>', 'Widget Title (eg. Custom Product Summary)')
   .option('-m, --module <module>', 'Module Name (eg. product-summary-extended)')
   .option('-s, --enable-slots', 'Enable Extension Slots (commented by default)', false)
+  .option('-d, --dist-path <path/to/compiled/libs>', 'Path to source widgets', './node_modules/@backbase')
+  .option('-p, --widget-name-pattern <sub-string>', 'Filter out items', '-widget-ang')
   .usage('[options] <file ...>')
-  .option('--list', 'List all available widgets');
+  .option('-l, --list', 'List all available widgets');
+
+program.parse(process.argv);
 
 const targetFolder = '.';
-const backbaseFolder = '/node_modules/@backbase';
+const enableExtensionSlots = program.enableSlots;
+const backbaseFolder = program.distPath;
+const widgetNamePattern = program.widgetNamePattern;
 
 function createPrompt(widget) {
     var prompt = inquirer.createPromptModule();
@@ -27,8 +33,9 @@ function createPrompt(widget) {
         return;
     }
 
-    if(fs.existsSync(targetFolder + backbaseFolder)){
-        const widgets = find_widgets();
+    const widgets = find_widgets().map(widget => widget.name);
+
+    if(widgets.length) {
         prompt([{
             type: 'list',
             choices: widgets,
@@ -44,7 +51,7 @@ function createPrompt(widget) {
 };
 
 function readWidget(widgetName, prompt, filledAnswers) {
-    fs.readFile(targetFolder + backbaseFolder + '/'+ widgetName + '/package.json', 'utf8', (err, contents) => {
+    fs.readFile(backbaseFolder + '/'+ widgetName + '/package.json', 'utf8', (err, contents) => {
         if(err) throw err;
         const packageJson = JSON.parse(contents);
         const npmName = packageJson.name;
@@ -76,7 +83,7 @@ function readWidget(widgetName, prompt, filledAnswers) {
             const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widgetName, answers.module);
             const copyTemplate$ = copyTemplate(targetFolder, backbaseFolder, widgetDestination, widgetName, title, answers);
 
-            fs.readFile(targetFolder + backbaseFolder + '/'+ widgetName + '/public_api.d.ts', 'utf8', (err, contents) => {
+            fs.readFile(backbaseFolder + '/'+ widgetName + '/public_api.d.ts', 'utf8', (err, contents) => {
                 if(err) throw err;
                 const widgetModuleMatch = contents.match(/(\S*WidgetModule)/gm);
                 const widgetModuleName = widgetModuleMatch && widgetModuleMatch[0] || '__WidgetModule';
@@ -100,18 +107,19 @@ function snake2TitleCase(val) {
 
 // Search the node_modules folder for valid widgets
 function find_widgets(){
-    var files = [];
+    // Find all available widgets in the node_modules/@backbase or in the dist/libs folder
+    const widgets = [];
+    if(!fs.existsSync(backbaseFolder)) return [];
 
-    // Find all available widgets
-    const customExtensionDir = targetFolder + backbaseFolder;
-    walk.sync(customExtensionDir, {max_depth: 1, "no_return": true}, (path) => {
-        if(path.indexOf('-widget-ang') != -1){
-            const pathComponents = path.split('/');
-            files.push(pathComponents[pathComponents.length - 1]);
-        }
+    walk.sync(backbaseFolder, {max_depth: 1, "no_return": true}, (path) => {
+        if(!path.includes(widgetNamePattern)) return;
+        const pathComponents = path.split('/');
+        widgets.push({
+            name: pathComponents[pathComponents.length - 1],
+            path,
+        });
     });
-
-    return files;
+    return widgets;
 }
 
 // Generate a new Widget
@@ -124,7 +132,7 @@ function generateWidget(name) {
 // Create Templates.html file
 function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, title, answers) {
     return new Promise((done, reject) => {
-        const sourceMap = targetFolder + backbaseFolder + '/'+ widget + '/bundles/backbase-'+ widget +'.umd.js';
+        const sourceMap = `${backbaseFolder}/${widget}/bundles/backbase-${widget}.umd.js`;
         fs.readFile(sourceMap, 'utf8', (err, contents) => {
             const regex = /<ng-template[^>]*Customizable.*<\/ng-template>/g;
             const matches = contents.match(regex);
@@ -154,7 +162,7 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
 
 // Copy the Model.xml file
 function copyFiles(targetFolder, backbaseFolder, widget, name) {
-    const sourcePath = targetFolder + backbaseFolder + '/'+ widget + '/backbase-items';
+    const sourcePath = backbaseFolder + '/'+ widget + '/backbase-items';
     return new Promise((done, reject) => {
         walk.sync(sourcePath, {max_depth: 2, "no_return": true}, (path) => {
             const filesToCopy = [
@@ -326,16 +334,13 @@ function getEventHandlerName(eventName) {
     return 'on' + eventName.charAt(0).toUpperCase() + eventName.slice(1);
 }
 
-program.parse(process.argv);
-const enableExtensionSlots = program.enableSlots;
-
 // Show a list of all available source widgets
 if(program.list){
     console.log('Available widgets:');
 
-    if(fs.existsSync(targetFolder + backbaseFolder)){
-        const widgets = find_widgets();
-        widgets.forEach(w => console.log(w));
+    const widgets = find_widgets();
+    if(widgets.length){
+        widgets.forEach(w => console.log(w.name));
     }
     else {
         console.error('Could not find node_modules, did you run npm install?');

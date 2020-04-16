@@ -13,16 +13,19 @@ bb-customize3 --list
 ```
 
 ## USAGE
+
 ```
 Usage: bb-customize3 [options] <file ...>
 
 Options:
-  -V, --version          output the version number
-  -t, --title <name>     Widget Title (eg. Custom Product Summary)
-  -m, --module <module>  Module Name (eg. product-summary-extended)
-  -s, --enable-slots     Enable Extension Slots (commented by default)
-  --list                 List all available widgets
-  -h, --help             output usage information
+  -V, --version                            output the version number
+  -t, --title <name>                       Widget Title (eg. Custom Product Summary)
+  -m, --module <module>                    Module Name (eg. product-summary-extended)
+  -s, --enable-slots                       Enable Extension Slots (commented by default)
+  -d, --dist-path <path/to/compiled/libs>  Path to source widgets (default: "./node_modules/@backbase")
+  -p, --widget-name-pattern <sub-string>   Filter out items (default: "-widget-ang")
+  -l, --list                               List all available widgets
+  -h, --help                               output usage information
 ```
 
 ## DESCRIPTION
@@ -45,7 +48,7 @@ The tool will ask you first:
 
 ### List all available widgets
 
-Lists all widget from default 'node_modules' directory:
+Lists all widget from default `node_modules` directory:
 
 ```bash
   $ bb-customize3 --list
@@ -57,6 +60,15 @@ All extension slots templates will be uncommented. This flag could be usefull fo
 
 ```bash
   $ bb-customize3 --enable-slots
+```
+
+### List widgets in the `dist/libs` directory
+
+All extension slots templates will be uncommented. This flag could be usefull for testing if OOB Extension slots are working.
+
+```bash
+  $ npm run package:libs
+  $ bb-customize3 --list --dist-path dist/libs --widget-name-pattern -widget
 ```
 
 ## DISCLAIMER
