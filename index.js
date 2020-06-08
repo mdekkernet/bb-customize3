@@ -13,6 +13,7 @@ program
   .option('-t, --title <name>', 'Widget Title (eg. Custom Product Summary)')
   .option('-m, --module <module>', 'Module Name (eg. product-summary-extended)')
   .option('-s, --enable-slots', 'Enable Extension Slots (commented by default)', false)
+  .option('-a, --project <project>', 'Project to add the widget to', false)
   .option('-d, --dist-path <path/to/compiled/libs>', 'Path to source widgets', './node_modules/@backbase')
   .option('-p, --widget-name-pattern <sub-string>', 'Filter out items', '-widget-ang')
   .usage('[options] <file ...>')
@@ -124,7 +125,7 @@ function find_widgets(){
 
 // Generate a new Widget
 function generateWidget(name) {
-    const generateCommand = `ng generate widget ${name}`;
+    const generateCommand = `ng generate widget ${name}` + (program.project ? ' --project ' + program.project : '');
     console.log('Running command:', generateCommand);
     return sh.exec(`npx ${generateCommand}`);
 }
