@@ -6,6 +6,7 @@ const fs = require('fs-extra');
 const inquirer = require('inquirer');
 const sh = require('shelljs')
 const xml2js = require('xml2js');
+const path = require('path');
 const version = require('./package.json').version;
 
 program
@@ -52,7 +53,7 @@ function createPrompt(widget) {
 };
 
 function readWidget(widgetName, prompt, filledAnswers) {
-    fs.readFile(backbaseFolder + '/'+ widgetName + '/package.json', 'utf8', (err, contents) => {
+    fs.readFile([backbaseFolder, widgetName, 'package.json'].join(path.sep), 'utf8', (err, contents) => {
         if(err) throw err;
         const packageJson = JSON.parse(contents);
         const npmName = packageJson.name;
@@ -76,7 +77,7 @@ function readWidget(widgetName, prompt, filledAnswers) {
         }
 
         function doGenerate(answers) {
-            const widgetDestination = targetFolder + '/libs/' + answers.module  + '/src';
+            const widgetDestination = [targetFolder, 'libs', answers.module, 'src'].join(path.sep);
 
             generateWidget(answers.module);
             componentName = snake2TitleCase(answers.module) + 'Component';
@@ -84,7 +85,7 @@ function readWidget(widgetName, prompt, filledAnswers) {
             const copyFiles$ = copyFiles(targetFolder, backbaseFolder, widgetName, answers.module);
             const copyTemplate$ = copyTemplate(targetFolder, backbaseFolder, widgetDestination, widgetName, title, answers);
 
-            fs.readFile(backbaseFolder + '/'+ widgetName + '/public_api.d.ts', 'utf8', (err, contents) => {
+            fs.readFile([backbaseFolder, widgetName, 'public_api.d.ts'].join(path.sep), 'utf8', (err, contents) => {
                 if(err) throw err;
                 const widgetModuleMatch = contents.match(/(\S*WidgetModule)/gm);
                 const widgetModuleName = widgetModuleMatch && widgetModuleMatch[0] || '__WidgetModule';
@@ -112,12 +113,12 @@ function find_widgets(){
     const widgets = [];
     if(!fs.existsSync(backbaseFolder)) return [];
 
-    walk.sync(backbaseFolder, {max_depth: 1, "no_return": true}, (path) => {
-        if(!path.includes(widgetNamePattern)) return;
-        const pathComponents = path.split('/');
+    walk.sync(backbaseFolder, {max_depth: 1, "no_return": true}, (fullPath) => {
+        if(!fullPath.includes(widgetNamePattern)) return;
+        const pathComponents = fullPath.split(path.sep);
         widgets.push({
             name: pathComponents[pathComponents.length - 1],
-            path,
+            fullPath,
         });
     });
     return widgets;
@@ -133,7 +134,7 @@ function generateWidget(name) {
 // Create Templates.html file
 function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, title, answers) {
     return new Promise((done, reject) => {
-        const sourceMap = `${backbaseFolder}/${widget}/bundles/backbase-${widget}.umd.js`;
+        const sourceMap = [backbaseFolder, widget, 'bundles',`backbase-${widget}.umd.js`].join(path.sep);
         fs.readFile(sourceMap, 'utf8', (err, contents) => {
             const regex = /<ng-template[^>]*Customizable.*<\/ng-template>/g;
             const matches = contents.match(regex);
@@ -151,7 +152,7 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
 
             matchString = `<${widgetTag}></${widgetTag}>\n\n${matchString}`;
 
-            const templateFile = widgetDestination +'/'+ answers.module + '.component.html';
+            const templateFile = [widgetDestination, answers.module + '.component.html'].join(path.sep);
             fs.writeFile(templateFile, matchString, (err) => {
                 if (err) throw err;
                 console.log('Saved Template');
@@ -163,17 +164,17 @@ function copyTemplate(targetFolder, backbaseFolder, widgetDestination, widget, t
 
 // Copy the Model.xml file
 function copyFiles(targetFolder, backbaseFolder, widget, name) {
-    const sourcePath = backbaseFolder + '/'+ widget + '/backbase-items';
+    const sourcePath = [backbaseFolder, widget, 'backbase-items'].join(path.sep);
     return new Promise((done, reject) => {
-        walk.sync(sourcePath, {max_depth: 2, "no_return": true}, (path) => {
+        walk.sync(sourcePath, {max_depth: 2, "no_return": true}, (fullPath) => {
             const filesToCopy = [
                 'model.xml',
                 'options.json',
                 'icon.png',
             ];
             filesToCopy.forEach(fileName => {
-                if(path.includes(fileName)) {
-                    fs.copy(path, targetFolder + '/libs/' + name + '/' + fileName);
+                if(fullPath.includes(fileName)) {
+                    fs.copy(fullPath, [targetFolder, 'libs', name, fileName].join(path.sep));
                     console.log(`Copied ${fileName}`);
                     done();
                 }
@@ -184,7 +185,7 @@ function copyFiles(targetFolder, backbaseFolder, widget, name) {
 
 // Add the original widget as dependency
 function addWidgetDependency(widgetDestination, widgetDestinationName, npmName, widgetModuleName) {
-    const widgetModule = `${widgetDestination}/${widgetDestinationName}.module.ts`;
+    const widgetModule = `${widgetDestination}${path.sep}${widgetDestinationName}.module.ts`;
     fs.readFile(widgetModule, 'utf8', (err, contents) => {
         if (err) throw err;
 
@@ -214,7 +215,7 @@ function addPreferencesToComponent(widgetDestination, name, [inputs, outputs], n
     // preferenceName?: String;
 
     // Update component
-    const componentFile = widgetDestination + `/${name}.component.ts`;
+    const componentFile = `${widgetDestination}${path.sep}${name}.component.ts`;
     fs.readFile(componentFile, 'utf8', (err, contents) => {
         if(err) throw err;
 
@@ -251,7 +252,7 @@ function addPreferencesToTemplate(widgetDestination, name, [inputs, outputs], wi
     // <wrapped-widget
     // [preferenceName]="preferenceName"
 
-    const templateFile = widgetDestination + `/${name}.component.html`;
+    const templateFile = widgetDestination + path.sep + name + '.component.html';
     fs.readFile(templateFile, 'utf8', (err, contents) => {
         if(err) throw err;
 
@@ -275,7 +276,7 @@ function addPreferencesToTemplate(widgetDestination, name, [inputs, outputs], wi
 // Extract the inputs and outputs and wire them inside the component
 function includeInputsAndOutputs(widgetDestination, widgetName, componentName, widgetTitle, npmName, widgetTag) {
     return new Promise((resolve, reject) => {
-        const modelXmlFile = widgetDestination + '/../model.xml';
+        const modelXmlFile = [widgetDestination , '..'  , 'model.xml'].join(path.sep);
         fs.readFile(modelXmlFile, 'utf8', (err, contents) => {
             if (err) throw err;
 

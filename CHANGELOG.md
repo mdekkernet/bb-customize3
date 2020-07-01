@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.7 (2020-07-01)
+* Fix to work on windows machines
+
 ## 1.0.6 (2020-04-10)
 * Copy only Customizable templates
 
